@@ -1,0 +1,53 @@
+services:
+  app:
+    image: phonebook-front
+    environment:
+      - MONGODB_URL=http://localhost:8080/
+    build:
+      context: ./phonebookFrontend
+      dockerfile: Dockerfile
+    volumes:
+      - ./phonebookFrontend/:/usr/src/app
+    container_name: phonebook-front
+  server:
+    image: phonebook-back
+    build:
+      context: ./phobebookBackend
+      dockerfile: Dockerfile
+    volumes:
+      - ./phobebookBackend/:/usr/src/app
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - MONGODB_URL=mongodb+srv://FullStackEli:FullStackEli@cluster0.x4uyz.mongodb.net:3456/phonebook?retryWrites=true&w=majority&appName=Cluster0
+    container_name: phonebook-back
+    depends_on:
+      - mongo
+      - redis
+  nginx:
+    image: nginx:1.20.1
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - 8080:80
+    container_name: reverse-proxy
+    depends_on:
+      - app
+      - server
+  mongo:
+    image: mongo
+    ports:
+      - 3456:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_DATABASE: the_database
+    volumes:
+      - ./phobebookBackend/mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+      - ./phobebookBackend/mongo_data:/data/db
+  redis:
+    image: redis
+    ports:
+      - 6379:6379
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - ./phobebookBackend/redis_data:/data
